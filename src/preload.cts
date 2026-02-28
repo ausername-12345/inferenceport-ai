@@ -22,8 +22,6 @@ import type { ToolList } from "./node-apis/types/tools.types.d.ts";
 contextBridge.exposeInMainWorld("ollama", {
 	// ===== Models =====
 	listModels: (clientUrl?: string): Promise<ModelInfo[]> => ipcRenderer.invoke("ollama:list", clientUrl),
-	runModel: (name: string): Promise<string> =>
-		ipcRenderer.invoke("ollama:run", name),
 	deleteModel: (name: string, clientUrl?: string): Promise<string> =>
 		ipcRenderer.invoke("ollama:delete", name, clientUrl),
 	resetChat: (): Promise<void> => ipcRenderer.invoke("ollama:reset"),
@@ -35,8 +33,8 @@ contextBridge.exposeInMainWorld("ollama", {
 			(_e: Electron.IpcRendererEvent, data: PullProgress) => cb(data)
 		);
 	},
-	onToolCall: (cb: (calls: any[]) => void) =>
-		ipcRenderer.on("ollama:new_tool_call", (_: Electron.IpcRendererEvent, calls: any[]) => cb(calls)),
+	onToolCall: (cb: (call: any) => void) =>
+		ipcRenderer.on("ollama:new_tool_call", (_: Electron.IpcRendererEvent, call: any) => cb(call)),
 	isAvailable: (): Promise<boolean> => ipcRenderer.invoke("ollama:available"),
 
 	streamPrompt: (
@@ -53,6 +51,33 @@ contextBridge.exposeInMainWorld("ollama", {
 			clientUrl
 		),
 	stop: (): void => ipcRenderer.send("ollama:stop"),
+	resolveVideoToolCall: (
+		toolCallId: string,
+		payload: Record<string, unknown> | null,
+	): Promise<boolean> =>
+		ipcRenderer.invoke(
+			"ollama:resolve-video-tool-call",
+			toolCallId,
+			payload,
+		),
+	resolveImageToolCall: (
+		toolCallId: string,
+		payload: Record<string, unknown> | null,
+	): Promise<boolean> =>
+		ipcRenderer.invoke(
+			"ollama:resolve-image-tool-call",
+			toolCallId,
+			payload,
+		),
+	resolveAudioToolCall: (
+		toolCallId: string,
+		payload: Record<string, unknown> | null,
+	): Promise<boolean> =>
+		ipcRenderer.invoke(
+			"ollama:resolve-audio-tool-call",
+			toolCallId,
+			payload,
+		),
 
 	onNewAsset: (cb: (msg: ChatAsset) => void): void => {
 		ipcRenderer.on(

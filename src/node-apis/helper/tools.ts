@@ -1,5 +1,11 @@
 import { LOG, LOG_ERR } from "./log.js";
-
+import fs from "fs";
+import path from "path"
+export const cache ={
+ 	cachedSupportsTools: null as string[] | null,
+	writeInProgress: null as Promise<void> | null
+}
+import { app } from "electron"
 async function fetchWithRetry(
     trace: string,
     url: string,
@@ -46,10 +52,17 @@ async function fetchWithRetry(
     throw new Error("Unreachable");
 }
 
-export async function GenerateImage(prompt: string): Promise<{ dataUrl: string }> {
+export type ImageGenerateRequest = {
+	prompt: string;
+	mode?: "auto" | "fantasy" | "realistic";
+};
+
+export async function GenerateImage(
+	request: ImageGenerateRequest,
+): Promise<{ dataUrl: string }> {
 	const trace = `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
-	LOG(trace, "ENTER GenerateImage", { prompt });
+	LOG(trace, "ENTER GenerateImage", request);
 	
 	const url =
 		`https://sharktide-lightning.hf.space/gen/image`
@@ -58,11 +71,14 @@ export async function GenerateImage(prompt: string): Promise<{ dataUrl: string }
 
 	let response: Response;
 	try {
+		const body: Record<string, unknown> = { prompt: request.prompt };
+		if (request.mode) body.mode = request.mode;
+
 		response = await fetch(url,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: prompt }),
+                body: JSON.stringify(body),
             }
         );
 		LOG(trace, "FETCH RESOLVED", {
@@ -81,7 +97,7 @@ export async function GenerateImage(prompt: string): Promise<{ dataUrl: string }
 			status: response.status,
 			statusText: response.statusText,
 		});
-		throw new Error(`Image fetch failed: ${response.status}`);
+		throw new Error(`Image fetch failed: ${response.status} ${await response.text()}`);
 	}
 
 	const contentType = response.headers.get("content-type");
@@ -205,19 +221,40 @@ export async function generateAudioOrSFX(prompt: string): Promise<ArrayBuffer> {
     return arrayBuffer;
 }
 
-export async function generateVideo(prompt: string): Promise<ArrayBuffer> {
+export type VideoGenerateRequest = {
+	prompt: string;
+	ratio?: "3:2" | "2:3" | "1:1";
+	mode?: "normal" | "fun";
+	duration?: number;
+	image_urls?: string[];
+};
+
+export async function generateVideo(
+	request: VideoGenerateRequest,
+): Promise<ArrayBuffer> {
     const trace = `video-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    	LOG(trace, "ENTER GenerateVideo", { prompt });
+    	LOG(trace, "ENTER GenerateVideo", request);
 	
 	const url =
 		`https://sharktide-lightning.hf.space/gen/video`
+
+	const body: Record<string, unknown> = {
+		prompt: request.prompt,
+	};
+
+	if (request.ratio) body.ratio = request.ratio;
+	if (request.mode) body.mode = request.mode;
+	if (typeof request.duration === "number") body.duration = request.duration;
+	if (Array.isArray(request.image_urls) && request.image_urls.length > 0) {
+		body.image_urls = request.image_urls;
+	}
 
 	let response: Response;
 	try {
 		response = await fetchWithRetry(trace, url, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ prompt: prompt }),
+			body: JSON.stringify(body),
 		}, 6);
 		LOG(trace, "FETCH RESOLVED", {
 			ok: response.ok,
@@ -260,4 +297,72 @@ export async function generateVideo(prompt: string): Promise<ArrayBuffer> {
 	LOG(trace, "EXIT GenerateVideo OK");
 
     return arrayBuffer;
+}
+
+async function ensureDir() {
+	await fs.promises.mkdir(path.dirname(path.join(app.getPath("userData"), "chat-sessions")), { recursive: true });
+}
+
+export async function fetchSupportedTools(): Promise<{ supportsTools: string[] }> {
+    const response = await fetch(
+        "https://cdn.jsdelivr.net/gh/sharktide/inferenceport-ai@main/MISC/prod/toolSupportingModels.json"
+    );
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch tool-supporting models: ${response.statusText}`);
+    }
+
+    const contentLength = Number(response.headers.get("content-length") ?? "0");
+    if (contentLength > 50_000) {
+        throw new Error("Payload too large — rejecting for safety");
+    }
+
+    let data: unknown;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error("Failed to parse JSON");
+    }
+
+    if (!Array.isArray(data)) {
+        throw new Error("Invalid JSON: expected a string[]");
+    }
+
+    for (const item of data) {
+        if (typeof item !== "string") {
+            throw new Error("Invalid JSON: all items must be strings");
+        }
+
+        if (/[\u0000-\u001F]/.test(item)) {
+            throw new Error("Invalid JSON: contains control characters");
+        }
+
+        if (/[<>]/.test(item)) {
+            throw new Error("Invalid JSON: contains HTML-like characters");
+        }
+
+        if (item.length > 200) {
+            throw new Error("Invalid JSON: string too long");
+        }
+    }
+
+    if (data.length > 2000) {
+        throw new Error("Invalid JSON: too many entries");
+    }
+
+    const supportsTools = data as string[];
+
+    cache.cachedSupportsTools = supportsTools;
+
+    await ensureDir();
+    const writeTask = fs.promises.writeFile(
+        path.join(app.getPath("userData"), "chat-sessions", "supportsTools.json"),
+        JSON.stringify({ supportsTools }, null, 2),
+        "utf-8"
+    );
+    cache.writeInProgress = writeTask;
+    await writeTask;
+    cache.writeInProgress = null;
+
+    return { supportsTools };
 }
