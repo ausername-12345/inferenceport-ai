@@ -15,7 +15,7 @@ billed, and a connection test.
 Server details
 --------------
 
-* **URL:** ``https://us-east-2.api.inferenceport.ai/mcp/council/`` (keep the
+* **URL:** ``https://api.inferenceport.ai/mcp/council/`` (keep the
   trailing slash)
 * **Transport:** Streamable HTTP
 * **Authentication:** OAuth sign-in, or an InferencePort API key sent as a
@@ -71,14 +71,14 @@ Claude Code, OAuth:
 
 .. code-block:: bash
 
-   claude mcp add --transport http council https://us-east-2.api.inferenceport.ai/mcp/council/
+   claude mcp add --transport http council https://api.inferenceport.ai/mcp/council/
    # then run /mcp inside Claude Code and choose "council" to sign in
 
 Claude Code, API key:
 
 .. code-block:: bash
 
-   claude mcp add --transport http council https://us-east-2.api.inferenceport.ai/mcp/council/ \
+   claude mcp add --transport http council https://api.inferenceport.ai/mcp/council/ \
      --header "Authorization: Bearer ipa_live_YOUR_KEY"
 
 Cursor and other clients that read ``mcpServers`` (omit ``headers`` to use
@@ -89,7 +89,7 @@ OAuth):
    {
      "mcpServers": {
        "council": {
-         "url": "https://us-east-2.api.inferenceport.ai/mcp/council/",
+         "url": "https://api.inferenceport.ai/mcp/council/",
          "headers": { "Authorization": "Bearer ipa_live_YOUR_KEY" }
        }
      }
@@ -103,7 +103,7 @@ VS Code (``.vscode/mcp.json``):
      "servers": {
        "council": {
          "type": "http",
-         "url": "https://us-east-2.api.inferenceport.ai/mcp/council/",
+         "url": "https://api.inferenceport.ai/mcp/council/",
          "headers": { "Authorization": "Bearer ipa_live_YOUR_KEY" }
        }
      }
@@ -119,7 +119,7 @@ Claude Desktop (through the ``mcp-remote`` bridge):
          "command": "npx",
          "args": [
            "-y", "mcp-remote",
-           "https://us-east-2.api.inferenceport.ai/mcp/council/",
+           "https://api.inferenceport.ai/mcp/council/",
            "--header", "Authorization:Bearer ipa_live_YOUR_KEY"
          ]
        }

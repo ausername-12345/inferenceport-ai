@@ -2,7 +2,7 @@ Lightning API
 =============
 
 The Lightning API is the hosted cloud API behind InferencePort AI Lightning.
-Its base URL is ``https://sharktide-lightning.hf.space`` and the generation
+Its base URL is ``https://api.inferenceport.ai`` and the generation
 routes live under ``/gen``.
 
 Authentication
@@ -17,7 +17,7 @@ Send both forms the same way:
 
 .. code-block:: bash
 
-   curl https://sharktide-lightning.hf.space/subscription \
+   curl https://api.inferenceport.ai/subscription \
      -H "Authorization: Bearer YOUR_TOKEN"
 
 The hosted API also exposes the Council MCP server at ``/mcp/council/`` with
@@ -160,7 +160,7 @@ Example:
 
 .. code-block:: bash
 
-   curl https://sharktide-lightning.hf.space/gen/chat/completions \
+   curl https://api.inferenceport.ai/gen/chat/completions \
      -H "Authorization: Bearer YOUR_API_KEY" \
      -H "Content-Type: application/json" \
      -d '{
