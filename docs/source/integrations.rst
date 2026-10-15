@@ -15,6 +15,9 @@ Data and Account Integrations
 
 * **Optional sign-in**: email, GitHub, or Google authentication.
 * **Optional sync**: remote session sync when enabled in Settings.
+* **Council MCP server**: let MCP-compatible assistants query a council of LLMs
+  with OAuth or an API key, billed to you or your organization. See
+  :doc:`mcp-council`.
 
 Advanced Networking Integrations
 --------------------------------
@@ -33,4 +36,5 @@ See Also
 
 * :doc:`getting-started`
 * :doc:`user-guide`
+* :doc:`mcp-council`
 * :doc:`troubleshooting`

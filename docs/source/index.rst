@@ -28,6 +28,7 @@ If you need one answer quickly, start here:
 * I want to use Hugging Face Spaces or websites: :doc:`user-guide`
 * I want optional sign-in and sync: :doc:`user-guide`
 * I want remote host or hosting/proxy setup: :doc:`user-guide`
+* I want to give my AI assistant a council of LLMs (MCP): :doc:`mcp-council`
 * Something is broken: :doc:`troubleshooting`
 
 What You Can Do In The App
@@ -57,6 +58,7 @@ Complete Documentation
    user-guide
    troubleshooting
    integrations
+   mcp-council
 
 .. toctree::
    :maxdepth: 2

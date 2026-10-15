@@ -20,6 +20,9 @@ Send both forms the same way:
    curl https://sharktide-lightning.hf.space/subscription \
      -H "Authorization: Bearer YOUR_TOKEN"
 
+The hosted API also exposes the Council MCP server at ``/mcp/council/`` with
+the same two token types. See :doc:`../mcp-council`.
+
 Generating API keys in the app
 ------------------------------
 
