@@ -57,6 +57,8 @@ Complete Documentation
    user-guide
    troubleshooting
    integrations
+   ai-shield
+   ai-shield-cli
 
 .. toctree::
    :maxdepth: 2

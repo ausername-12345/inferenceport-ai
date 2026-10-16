@@ -256,6 +256,106 @@ Common status codes:
 * ``429`` for plan rate-limit exhaustion
 * ``500`` for upstream provider or server configuration failures
 
+AI Shield
+---------
+
+AI Shield scores requests for abuse, fraud, AI-specific attacks, web
+attacks, malicious files, weak passwords, marketplace scams and data
+leaks, and enforces customer-defined rules. All routes live under
+``/ai-shield``, use the same bearer tokens and count
+against the plan's ``aiShieldDaily`` quota.
+
+``POST /ai-shield/analyze``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Full analysis of any mix of signals: ``email``, ``phone``, ``username``,
+``ip``, ``device_fingerprint``, ``geolocation``, ``signup_time``,
+``content`` / ``messages``, ``urls``, ``sender`` and a free-form
+``metadata`` object (device, behaviour, login, payment, promo and trust
+signals such as ``form_fill_ms``, ``failed_logins``,
+``cards_tried_last_hour`` or ``account_age_days``).
+
+Set ``task`` to choose a profile that re-weights categories and sets the
+decision thresholds:
+
+* ``general`` (default), ``signup``, ``login``, ``payment``
+* ``content_moderation``, ``prompt_guard``, ``agent_tool_output``
+* ``phishing``, ``dlp``
+* ``api_request``, ``file_upload``, ``password``
+* ``marketplace``, ``reviews``, ``domain``
+
+Other inputs (also accepted by ``/scan``):
+
+* ``request``: ``{method, url|path, query, headers, body}`` for WAF-style
+  checks (SQL/NoSQL/command injection, XSS, template injection, XXE,
+  Log4Shell, traversal, SSRF, scanner user agents, sensitive-path probes)
+* ``file`` / ``files``: ``{name, content_base64|text, mime}`` up to 10 MB
+  for static upload triage (real vs claimed type, executables, macros,
+  scripted PDF/SVG/HTML, polyglots, zip-slip and zip bombs); extracted
+  text also goes through the content detectors
+* ``password``: strength, common/personal patterns and a breach count via
+  Have I Been Pwned k-anonymity; never stored, echoed or sent to the LLM
+* ``listing`` / ``review``: prohibited and counterfeit goods, marketplace
+  scams, fake and incentivised reviews
+* ``domain`` / ``domains`` and ``wallet``: look-alikes, risky or new
+  domains, crypto address checksums
+
+Optional ``config``: ``features`` (flag map), ``thresholds``
+(``challenge`` / ``review`` / ``block``), ``category_weights``,
+``trusted_domains``, ``redact`` and ``include_evidence``. For anything
+Shield has no built-in detector for, add ``blocklists`` / ``allowlists``
+(emails, email domains, domains, IPs with CIDR, usernames, phones,
+countries, keywords, user agents, wallets, device fingerprints, account
+IDs) and up to 50 ``custom_rules`` (``keywords`` or a ``pattern``,
+``fields``, ``category``, ``weight``, ``action``). Unsafe regexes are
+rejected and reported in ``warnings``.
+
+Response fields:
+
+* ``risk_score`` (0-100), ``confidence`` (0-1)
+* ``decision``: ``allow``, ``challenge``, ``rate_limit``, ``review`` or ``block``
+* ``reasons``, ``threat_categories``, ``category_scores``, ``actions``
+* ``findings.sensitive_data`` and ``findings.urls``
+* ``scores`` (deterministic score, hard-evidence floor, LLM review)
+* ``redacted_content`` when redaction is on, ``evidence``, ``version``
+
+``POST /ai-shield/scan``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Content-only variant (``content``, ``text``, ``prompt``, ``messages`` or
+``urls``) defaulting to ``task: prompt_guard``. Identity fields are
+ignored.
+
+``POST /ai-shield/detect-phishing``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Accepts ``sender``, ``reply_to``, ``subject``, ``content``, ``url`` /
+``urls`` and optional ``authentication`` (``spf``, ``dkim``, ``dmarc``).
+Returns ``is_phishing``, ``threat_level``, ``indicators``, ``explanation``
+and the full verdict fields. It works without the LLM reviewer.
+
+``GET /ai-shield/capabilities``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Public (no token): tasks, thresholds, feature flags with defaults,
+categories and decisions.
+
+``POST /ai-shield/check``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Single-purpose checks: ``type`` (``email``, ``domain``, ``url``, ``ip``, ``phone``, ``username``, ``user_agent``,
+``wallet``, ``jwt``, ``hash``, ``secret``) plus ``value`` or up to 500 ``values``. Each result has a ``verdict``,
+``risk_score``, matched ``rules`` and typed ``facts`` (for example ``facts.disposable`` for email). See :doc:`../ai-shield`
+for the complete AI Shield guide.
+
+From the command line, the same routes are available as
+``ipx shield scan``, ``ipx shield analyze``, ``ipx shield phishing``,
+``ipx shield url``, ``ipx shield request``, ``ipx shield file``,
+``ipx shield password``, ``ipx shield listing``, ``ipx shield review``,
+``ipx shield domain`` and ``ipx shield tasks``; ``--policy``, ``--block``
+and ``--allow`` pass custom rules and lists. ``--fail-on <decision>``
+exits with status 3 for use in CI.
+
 Implementation notes
 --------------------
 
@@ -266,3 +366,4 @@ Relevant files:
 * ``lightning-api/helper/ratelimit.py``
 * ``lightning-api/helper/subscriptions.py``
 * ``MISC/api.sql``
+* AI Shield: ``src/shield/`` in the InferencePort-Lightning repository
