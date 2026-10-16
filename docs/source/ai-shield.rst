@@ -87,7 +87,9 @@ Response:
   ``confidence``, ``rules`` (matched rule ids such as ``email.disposable``), ``reasons``, ``categories``, ``facts``
 
 Third-party reputation lookups (email, IP, domain age) run only for requests of 10 values or fewer unless
-``config.external_lookups`` is set. Errors: ``400`` (bad ``type``/``values``, more than 500 values), ``413`` (value too long).
+``config.external_lookups`` is set. ``config`` also accepts ``blocklists``, ``allowlists`` and ``custom_rules``, applied to
+each value according to its type (for example ``email_domains`` for emails, ``ips`` with CIDR for IP addresses). ``jwt`` and
+``secret`` values are never echoed back: ``value`` is returned as ``<N characters>``. Errors: ``400`` (bad ``type``/``values``, more than 500 values), ``413`` (value too long).
 
 ``POST /ai-shield/analyze``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -175,7 +177,7 @@ Command line
    ipx shield tasks                                            # tasks, features and check types (no sign-in)
    ipx shield disposable -f signups.txt --only-disposable      # disposable email detection
    ipx shield check ip -f iocs.txt --only-flagged --csv        # bulk indicator triage
-   ipx shield check jwt "$TOKEN" --fail-on review              # audit a token
+   printf '%s\n' "$TOKEN" | ipx shield check jwt --fail-on review   # audit a token (stdin keeps it out of `ps`)
    ipx shield scan -f prompt.txt --task prompt_guard           # guard an LLM prompt
    git diff --cached | ipx shield scan --task dlp --fail-on review
    ipx shield analyze --task signup --email a@x.com --ip 203.0.113.7 -m form_fill_ms=500
@@ -186,6 +188,10 @@ Command line
    ipx shield listing --title "Rolex 1:1" --price 120 --market-price 10000 --brand Rolex
    ipx shield review "Best ever!!" --rating 5 --author-reviews-24h 30
    ipx shield domain paypa1-login.top --wallet bc1q...
+
+Safety notes: ``ipx shield password`` and ``check jwt|secret`` refuse a plain ``http://`` API URL for non-local hosts;
+``--redact`` hides masked previews as well; an ``.eml``'s ``Authentication-Results`` is ignored unless you pass
+``--trust-eml-auth`` (senders can forge it); the short ``-q`` flag goes before the command (``ipx -q shield scan``).
 
 Shared options: ``--fail-on DECISION`` (exit code ``3`` when the verdict is that decision or stricter), ``--offline``,
 ``--no-llm``, ``--feature NAME=on|off``, ``--trusted-domain``, ``--challenge-at/--review-at/--block-at``, ``-e``,
@@ -205,7 +211,7 @@ Use cases
 * **Leak prevention:** ``--task dlp --redact`` on outputs, logs and diffs.
 * **LLM and agent guardrails:** ``task: prompt_guard`` for user input and ``agent_tool_output`` for retrieved content.
 * **Phishing triage:** ``ipx shield phishing -f message.eml``.
-* **Token and hash audits:** ``check jwt`` and ``check hash``.
+* **Token and hash audits:** ``check jwt`` (pipe the token on stdin) and ``check hash``.
 * **Your own rules:** ``blocklists``, ``allowlists`` and ``custom_rules`` on any call.
 
 Accuracy and limits
