@@ -259,8 +259,10 @@ Common status codes:
 AI Shield
 ---------
 
-AI Shield scores requests for abuse, fraud and AI-specific attacks. All
-routes live under ``/ai-shield``, use the same bearer tokens and count
+AI Shield scores requests for abuse, fraud, AI-specific attacks, web
+attacks, malicious files, weak passwords, marketplace scams and data
+leaks, and enforces customer-defined rules. All routes live under
+``/ai-shield``, use the same bearer tokens and count
 against the plan's ``aiShieldDaily`` quota.
 
 ``POST /ai-shield/analyze``
@@ -279,10 +281,34 @@ decision thresholds:
 * ``general`` (default), ``signup``, ``login``, ``payment``
 * ``content_moderation``, ``prompt_guard``, ``agent_tool_output``
 * ``phishing``, ``dlp``
+* ``api_request``, ``file_upload``, ``password``
+* ``marketplace``, ``reviews``, ``domain``
+
+Other inputs (also accepted by ``/scan``):
+
+* ``request``: ``{method, url|path, query, headers, body}`` for WAF-style
+  checks (SQL/NoSQL/command injection, XSS, template injection, XXE,
+  Log4Shell, traversal, SSRF, scanner user agents, sensitive-path probes)
+* ``file`` / ``files``: ``{name, content_base64|text, mime}`` up to 10 MB
+  for static upload triage (real vs claimed type, executables, macros,
+  scripted PDF/SVG/HTML, polyglots, zip-slip and zip bombs); extracted
+  text also goes through the content detectors
+* ``password``: strength, common/personal patterns and a breach count via
+  Have I Been Pwned k-anonymity; never stored, echoed or sent to the LLM
+* ``listing`` / ``review``: prohibited and counterfeit goods, marketplace
+  scams, fake and incentivised reviews
+* ``domain`` / ``domains`` and ``wallet``: look-alikes, risky or new
+  domains, crypto address checksums
 
 Optional ``config``: ``features`` (flag map), ``thresholds``
 (``challenge`` / ``review`` / ``block``), ``category_weights``,
-``trusted_domains``, ``redact`` and ``include_evidence``.
+``trusted_domains``, ``redact`` and ``include_evidence``. For anything
+Shield has no built-in detector for, add ``blocklists`` / ``allowlists``
+(emails, email domains, domains, IPs with CIDR, usernames, phones,
+countries, keywords, user agents, wallets, device fingerprints, account
+IDs) and up to 50 ``custom_rules`` (``keywords`` or a ``pattern``,
+``fields``, ``category``, ``weight``, ``action``). Unsafe regexes are
+rejected and reported in ``warnings``.
 
 Response fields:
 
@@ -316,7 +342,10 @@ categories and decisions.
 
 From the command line, the same routes are available as
 ``ipx shield scan``, ``ipx shield analyze``, ``ipx shield phishing``,
-``ipx shield url`` and ``ipx shield tasks``. ``--fail-on <decision>``
+``ipx shield url``, ``ipx shield request``, ``ipx shield file``,
+``ipx shield password``, ``ipx shield listing``, ``ipx shield review``,
+``ipx shield domain`` and ``ipx shield tasks``; ``--policy``, ``--block``
+and ``--allow`` pass custom rules and lists. ``--fail-on <decision>``
 exits with status 3 for use in CI.
 
 Implementation notes
