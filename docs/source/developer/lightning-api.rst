@@ -340,6 +340,14 @@ and the full verdict fields. It works without the LLM reviewer.
 Public (no token): tasks, thresholds, feature flags with defaults,
 categories and decisions.
 
+``POST /ai-shield/check``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Single-purpose checks: ``type`` (``email``, ``domain``, ``url``, ``ip``, ``phone``, ``username``, ``user_agent``,
+``wallet``, ``jwt``, ``hash``, ``secret``) plus ``value`` or up to 500 ``values``. Each result has a ``verdict``,
+``risk_score``, matched ``rules`` and typed ``facts`` (for example ``facts.disposable`` for email). See :doc:`../ai-shield`
+for the complete AI Shield guide.
+
 From the command line, the same routes are available as
 ``ipx shield scan``, ``ipx shield analyze``, ``ipx shield phishing``,
 ``ipx shield url``, ``ipx shield request``, ``ipx shield file``,
