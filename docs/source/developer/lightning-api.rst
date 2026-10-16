@@ -256,6 +256,69 @@ Common status codes:
 * ``429`` for plan rate-limit exhaustion
 * ``500`` for upstream provider or server configuration failures
 
+AI Shield
+---------
+
+AI Shield scores requests for abuse, fraud and AI-specific attacks. All
+routes live under ``/ai-shield``, use the same bearer tokens and count
+against the plan's ``aiShieldDaily`` quota.
+
+``POST /ai-shield/analyze``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Full analysis of any mix of signals: ``email``, ``phone``, ``username``,
+``ip``, ``device_fingerprint``, ``geolocation``, ``signup_time``,
+``content`` / ``messages``, ``urls``, ``sender`` and a free-form
+``metadata`` object (device, behaviour, login, payment, promo and trust
+signals such as ``form_fill_ms``, ``failed_logins``,
+``cards_tried_last_hour`` or ``account_age_days``).
+
+Set ``task`` to choose a profile that re-weights categories and sets the
+decision thresholds:
+
+* ``general`` (default), ``signup``, ``login``, ``payment``
+* ``content_moderation``, ``prompt_guard``, ``agent_tool_output``
+* ``phishing``, ``dlp``
+
+Optional ``config``: ``features`` (flag map), ``thresholds``
+(``challenge`` / ``review`` / ``block``), ``category_weights``,
+``trusted_domains``, ``redact`` and ``include_evidence``.
+
+Response fields:
+
+* ``risk_score`` (0-100), ``confidence`` (0-1)
+* ``decision``: ``allow``, ``challenge``, ``rate_limit``, ``review`` or ``block``
+* ``reasons``, ``threat_categories``, ``category_scores``, ``actions``
+* ``findings.sensitive_data`` and ``findings.urls``
+* ``scores`` (deterministic score, hard-evidence floor, LLM review)
+* ``redacted_content`` when redaction is on, ``evidence``, ``version``
+
+``POST /ai-shield/scan``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Content-only variant (``content``, ``text``, ``prompt``, ``messages`` or
+``urls``) defaulting to ``task: prompt_guard``. Identity fields are
+ignored.
+
+``POST /ai-shield/detect-phishing``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Accepts ``sender``, ``reply_to``, ``subject``, ``content``, ``url`` /
+``urls`` and optional ``authentication`` (``spf``, ``dkim``, ``dmarc``).
+Returns ``is_phishing``, ``threat_level``, ``indicators``, ``explanation``
+and the full verdict fields. It works without the LLM reviewer.
+
+``GET /ai-shield/capabilities``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Public (no token): tasks, thresholds, feature flags with defaults,
+categories and decisions.
+
+From the command line, the same routes are available as
+``ipx shield scan``, ``ipx shield analyze``, ``ipx shield phishing``,
+``ipx shield url`` and ``ipx shield tasks``. ``--fail-on <decision>``
+exits with status 3 for use in CI.
+
 Implementation notes
 --------------------
 
@@ -266,3 +329,4 @@ Relevant files:
 * ``lightning-api/helper/ratelimit.py``
 * ``lightning-api/helper/subscriptions.py``
 * ``MISC/api.sql``
+* AI Shield: ``src/shield/`` in the InferencePort-Lightning repository
